@@ -1,4 +1,6 @@
 .idea/
-__pycache__/
-api/__pycache__/
-config/__pycache__/
+__pycache__/*.pyc
+api/__pycache__/*.pyc
+config/__pycache__/*.pyc
+api/*.pyc
+config/*.pyc
