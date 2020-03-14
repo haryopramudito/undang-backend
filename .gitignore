@@ -3,4 +3,5 @@ __pycache__/*.pyc
 api/__pycache__/*.pyc
 config/__pycache__/*.pyc
 api/*.pyc
-config/*.pyc
+config/*.py
+__pycache__/
