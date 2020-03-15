@@ -7,11 +7,11 @@ from bson.objectid import ObjectId
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
-users_blueprint = Blueprint('users_blueprint', __name__)
+users_api = Blueprint('users_api', __name__)
 
 
 # route login
-@users_blueprint.route("/v1/login", methods=["POST"])
+@users_api.route("/v1/login", methods=["POST"])
 def login():
     _json = request.json
     _email = _json['email']
@@ -32,8 +32,9 @@ def login():
     else:
         return jsonify(message="Email Not Found"), 401
 
+
 # route add user
-@users_blueprint.route('/v1/register', methods=['POST'])
+@users_api.route('/v1/register', methods=['POST'])
 def add_user():
     _json = request.json
     _name = _json['name']
@@ -54,7 +55,7 @@ def add_user():
 
 
 # route for get all users
-@users_blueprint.route('/v1/users')
+@users_api.route('/v1/users')
 @jwt_required
 def get_all_users():
     users = mongo.db.user.find()
@@ -64,7 +65,7 @@ def get_all_users():
 
 
 # route for get one user
-@users_blueprint.route('/v1/users/<id>')
+@users_api.route('/v1/users/<id>')
 @jwt_required
 def get_one_user(id):
     try:
@@ -80,9 +81,8 @@ def get_one_user(id):
             return resp
         else:
             return resp
-
         mongo.cx.close()
-    except InvalidId:
+    except (InvalidId, TypeError):
         message = {
             'status': 400,
             'message': 'oops Your id format is not standard'
@@ -92,13 +92,62 @@ def get_one_user(id):
 
         return resp_err_get_one
 
-# route for delete a user
-@users_blueprint.route('/v1/delete_user/<id>', methods=['DELETE'])
+
+# route for edit / update user
+@users_api.route('/v1/edit_user', methods=['PUT'])
 @jwt_required
-def delete(id):
+def update_user():
     try:
+        _json = request.json
+        _id = _json['_id']
+        _name = _json['name']
+        _email = _json['email']
+        _password = _json['pwd']
         # check user is exists or not?
-        user = mongo.db.user.find_one({'_id': ObjectId(id)})
+        user = mongo.db.user.find_one({'_id': ObjectId(_id)})
+        resp = dumps(user)
+        if resp == 'null':
+            message = {
+                'status': 400,
+                'message': 'oops cannot edit user, user not Found !!!'
+            }
+            resp = jsonify(message)
+            resp.status_code = 400
+            return resp
+        else:
+
+            # validate the received values
+            if _name and _email and _password and _id and request.method == 'PUT':
+                # do not save password as a plain text
+                _hashed_password = generate_password_hash(_password)
+                # save edits
+                mongo.db.user.update_one({'_id': ObjectId(_id['$oid']) if '$oid' in _id else ObjectId(_id)},
+                                         {'$set': {'name': _name, 'email': _email, 'pwd': _hashed_password}})
+                resp = jsonify('User updated successfully!')
+                resp.status_code = 200
+                return resp
+            else:
+                return "not_found"
+
+    except (InvalidId, TypeError):
+        message = {
+            'status': 400,
+            'message': 'oops Your id format is not standard'
+        }
+        resp_err_edit = jsonify(message)
+        resp_err_edit.status_code = 400
+        return resp_err_edit
+
+
+# route for delete a user
+@users_api.route('/v1/delete_user', methods=['DELETE'])
+@jwt_required
+def delete():
+    try:
+        _json = request.json
+        _id = _json['_id']
+        # check user is exists or not?
+        user = mongo.db.user.find_one({'_id': ObjectId(_id)})
         resp = dumps(user)
         if resp == 'null':
             message = {
@@ -109,12 +158,12 @@ def delete(id):
             resp.status_code = 400
             return resp
         else:
-            mongo.db.user.delete_one({'_id': ObjectId(id)})
+            mongo.db.user.delete_one({'_id': ObjectId(_id)})
             resp = jsonify('User deleted successfully!')
             resp.status_code = 200
             return resp
 
-    except InvalidId:
+    except (InvalidId, TypeError):
         message = {
             'status': 400,
             'message': 'oops Your id format is not standard'

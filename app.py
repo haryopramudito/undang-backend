@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from api.users import users_blueprint
+from api.users import users_api
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 
 # use flask library
@@ -13,8 +13,8 @@ app.config["JWT_SECRET_KEY"] = "dr2711hp"
 # prevent CORS issue
 CORS(app)
 
-# call route here
-app.register_blueprint(users_blueprint)
+# call / register api route here :
+app.register_blueprint(users_api)
 
 
 # error not found url handler
