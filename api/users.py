@@ -17,8 +17,6 @@ def login():
     _email = _json['email']
     _password = _json['pwd']
     _hashed_password = generate_password_hash(_password)
-    print(_password)
-
     user = mongo.db.user.find_one({"email": _email})
     if user:
         resp = dumps(user)
@@ -36,22 +34,29 @@ def login():
 # route add user
 @users_api.route('/v1/register', methods=['POST'])
 def add_user():
-    _json = request.json
-    _name = _json['name']
-    _email = _json['email']
-    _password = _json['pwd']
+    _header = request.headers
+    auth = _header.get("Register_Token")
+    key = 'agfjhefy65dfs'
+    if auth == key:
+        _json = request.json
+        _name = _json['name']
+        _email = _json['email']
+        _password = _json['pwd']
 
-    # validate the received values
-    if _name and _email and _password and request.method == 'POST':
-        # do not save password as a plain text
-        _hashed_password = generate_password_hash(_password)
-        # save details
-        mongo.db.user.insert({'name': _name, 'email': _email, 'pwd': _hashed_password})
-        resp = jsonify('User added successfully!')
-        resp.status_code = 200
-        return resp
+        # validate the received values
+        if _name and _email and _password and request.method == 'POST':
+            # do not save password as a plain text
+            _hashed_password = generate_password_hash(_password)
+            # save details
+            mongo.db.user.insert({'name': _name, 'email': _email, 'pwd': _hashed_password})
+            resp = jsonify('User added successfully!')
+            resp.status_code = 200
+            return resp
+        else:
+            return "not_found"
     else:
-        return "not_found"
+        return jsonify(message="Invalid Credential"), 401
+
 
 
 # route for get all users
@@ -59,7 +64,7 @@ def add_user():
 @jwt_required
 def get_all_users():
     users = mongo.db.user.find()
-    resp = dumps(users)
+    resp = dumps(users,indent=4, separators=(',', ': '), sort_keys=True)
     return resp
     mongo.cx.close()
 
@@ -70,7 +75,7 @@ def get_all_users():
 def get_one_user(id):
     try:
         user = mongo.db.user.find_one({'_id': ObjectId(id)})
-        resp = dumps(user)
+        resp = dumps(user, indent=4, separators=(',', ': '), sort_keys=True)
         if resp == 'null':
             message = {
                 'status': 200,
@@ -105,7 +110,7 @@ def update_user():
         _password = _json['pwd']
         # check user is exists or not?
         user = mongo.db.user.find_one({'_id': ObjectId(_id)})
-        resp = dumps(user)
+        resp = dumps(user,indent=4, separators=(',', ': '), sort_keys=True)
         if resp == 'null':
             message = {
                 'status': 400,
